@@ -12,4 +12,5 @@ function App() {
   );
 }
 
+console.log(import.meta.env.VITE_GITHUB_TOKEN);
 export default App;
