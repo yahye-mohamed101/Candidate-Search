@@ -1,53 +1,74 @@
 import { useState, useEffect } from 'react';
-import { searchGithub } from '../api/API.jsx';
-import Candidate from '../interfaces/Candidate.interface.jsx';
+import { searchGithub, searchGithubUser } from '../api/API';
+import Candidate from '../interfaces/Candidate.interface';
+import Card from '../components/Cards';
+import __SavedCandidates from './SavedCandidates';
 
 const CandidateSearch = () => {
-  const [candidates, setCandidates] = useState<Candidate[]>([]);
-  const [currentCandidateIndex, setCurrentCandidateIndex] = useState(0);
+  // Create a state variable to hold the list of candidates retrieved from GitHub.
+  const [candidatesList, setCandidatesList] = useState<Candidate[]>([]);
+  const [currentCandidate, setCurrentCandidate] = useState<Candidate | null>(null);
+  const [index, setIndex] = useState(0);
+  const [__error, setError] = useState<string | null>(null);
 
+  // Fetch candidates on component mount
   useEffect(() => {
     const fetchCandidates = async () => {
-      const data = await searchGithub();
-      setCandidates(data);
+      try {
+        const data = await searchGithub();
+        setCandidatesList(data);
+      } catch (error) {
+        setError('Failed to load candidates');
+      }
     };
     fetchCandidates();
   }, []);
+// gets the details needed using the searchGitHubUser function/api call
+  useEffect(() => {
+    const fetchCandidateDetails = async () => {
+      const candidate = candidatesList[index];
+      if (candidate) {
+        try {
+          const detailedCandidate = await searchGithubUser(candidate.login);
+          setCurrentCandidate(detailedCandidate);
+        } catch (error) {
+          setError('Failed to load candidate details');
+        }
+      }
+    };
 
-  const addCandidate = (candidate: Candidate) => {
+    fetchCandidateDetails();
+  }, [index, candidatesList]);
+
+  // Handle save candidate
+  const handleSave = () => {
+    // let candidate = candidatesList[index];
     const savedCandidates = JSON.parse(localStorage.getItem('savedCandidates') || '[]');
-    savedCandidates.push(candidate);
-    localStorage.setItem('savedCandidates', JSON.stringify(savedCandidates));
-    nextCandidate();
+    localStorage.setItem('savedCandidates', JSON.stringify([...savedCandidates, currentCandidate]));
+    handleNext();
   };
 
-  const nextCandidate = () => {
-    setCurrentCandidateIndex(current => (current + 1) % candidates.length);
+  // Skip current candidate
+  const handleSkip = () => {
+    handleNext();
+  }
+
+  const handleNext = () => {
+    setIndex((prevIndex) => (prevIndex + 1) % candidatesList.length);
   };
-
-  const currentCandidate = candidates[currentCandidateIndex];
-
   return (
-    <div>
-      <h1>Candidate Search</h1>
-      {currentCandidate ? (
-        <div className="candidate-card">
-          <img src={currentCandidate.avatar} alt={`${currentCandidate.username} avatar`} />
-          <h2>{currentCandidate.name}</h2>
-          <p>Username: {currentCandidate.username}</p>
-          <p>Location: {currentCandidate.location}</p>
-          <p>Email: {currentCandidate.email || 'N/A'}</p>
-          <p>Company: {currentCandidate.company || 'N/A'}</p>
-          <a href={currentCandidate.html_url} target="_blank" rel="noopener noreferrer">
-            GitHub Profile
-          </a>
-          <button onClick={() => addCandidate(currentCandidate)}>Add</button>
-          <button onClick={nextCandidate}>Skip</button>
-        </div>
-      ) : (
-        <p>No more candidates to display.</p>
-      )}
-    </div>
+    <>
+      <h1>CandidateSearch</h1>
+      {candidatesList.length > 0 ? (
+          <Card item={candidatesList[index]} />
+        ) : (
+          <p>No Candidates available</p>
+        )}
+      <div className='buttonsSearch'>
+        <button className='minus' type="button" onClick={handleSkip}>-</button>
+        <button className='plus' type="button" onClick={handleSave}>+</button>
+      </div>
+    </>
   );
 };
 
