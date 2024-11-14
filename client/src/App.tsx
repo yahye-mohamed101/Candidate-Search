@@ -13,4 +13,6 @@ function App() {
 }
 
 console.log(import.meta.env.VITE_GITHUB_TOKEN);
+console.log(import.meta.env.VITE_TEST_VARIABLE);
+console.log(import.meta.env);
 export default App;

@@ -1,59 +1,51 @@
 import { useState, useEffect } from 'react';
-import { searchGithub } from '../api/API'; // Make sure this is correctly imported
-import Candidate from '../interfaces/Candidate.interface.js'; // Import the Candidate interface
+import { searchGithub } from '../api/API.jsx';
+import Candidate from '../interfaces/Candidate.interface.jsx';
 
 const CandidateSearch = () => {
-  const [candidate, setCandidate] = useState<Candidate | null>(null);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [currentCandidateIndex, setCurrentCandidateIndex] = useState(0);
 
-  // Fetch candidates when component mounts
   useEffect(() => {
     const fetchCandidates = async () => {
       const data = await searchGithub();
       setCandidates(data);
-      setCandidate(data[0]); // Set first candidate to display
     };
-
     fetchCandidates();
   }, []);
 
-  const handleSaveCandidate = () => {
-    if (candidate) {
-      const savedCandidates = JSON.parse(localStorage.getItem('savedCandidates') || '[]');
-      savedCandidates.push(candidate);
-      localStorage.setItem('savedCandidates', JSON.stringify(savedCandidates));
-      setCandidates(candidates.slice(1)); // Remove the saved candidate from the list
-      setCandidate(candidates[1]); // Update the displayed candidate
-    }
+  const addCandidate = (candidate: Candidate) => {
+    const savedCandidates = JSON.parse(localStorage.getItem('savedCandidates') || '[]');
+    savedCandidates.push(candidate);
+    localStorage.setItem('savedCandidates', JSON.stringify(savedCandidates));
+    nextCandidate();
   };
 
-  const handleSkipCandidate = () => {
-    setCandidates(candidates.slice(1)); // Skip the current candidate
-    setCandidate(candidates[1]); // Update the displayed candidate
+  const nextCandidate = () => {
+    setCurrentCandidateIndex(current => (current + 1) % candidates.length);
   };
+
+  const currentCandidate = candidates[currentCandidateIndex];
 
   return (
-    <div className="candidate-search-container">
-      {candidate ? (
+    <div>
+      <h1>Candidate Search</h1>
+      {currentCandidate ? (
         <div className="candidate-card">
-          <img src={candidate.avatar} alt={candidate.name} className="candidate-avatar" />
-          <div className="candidate-info">
-            <h2>{candidate.name}</h2>
-            <p>{candidate.username}</p>
-            <p>{candidate.location}</p>
-            <p>{candidate.company}</p>
-            <p>{candidate.email}</p>
-            <a href={candidate.html_url} target="_blank" rel="noopener noreferrer">
-              GitHub Profile
-            </a>
-          </div>
-          <div className="candidate-actions">
-            <button onClick={handleSaveCandidate} className="save-btn">+</button>
-            <button onClick={handleSkipCandidate} className="skip-btn">-</button>
-          </div>
+          <img src={currentCandidate.avatar} alt={`${currentCandidate.username} avatar`} />
+          <h2>{currentCandidate.name}</h2>
+          <p>Username: {currentCandidate.username}</p>
+          <p>Location: {currentCandidate.location}</p>
+          <p>Email: {currentCandidate.email || 'N/A'}</p>
+          <p>Company: {currentCandidate.company || 'N/A'}</p>
+          <a href={currentCandidate.html_url} target="_blank" rel="noopener noreferrer">
+            GitHub Profile
+          </a>
+          <button onClick={() => addCandidate(currentCandidate)}>Add</button>
+          <button onClick={nextCandidate}>Skip</button>
         </div>
       ) : (
-        <p>Loading...</p>
+        <p>No more candidates to display.</p>
       )}
     </div>
   );
